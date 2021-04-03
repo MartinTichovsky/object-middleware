@@ -1,0 +1,8 @@
+build/
+dist/
+node_modules/
+.snapshots/
+.eslintcache
+.tsbuildinfo
+*.min.js
+*.json
