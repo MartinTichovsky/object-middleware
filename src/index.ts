@@ -40,10 +40,12 @@ const assignNewMethod = <T>({
   key,
   newMethod,
   object,
+  originDefinedInPrototype,
   originMethod,
   prototype
 }: ObjectMiddlewareAssignParams<T>) => {
   if (
+    originDefinedInPrototype &&
     prototype !== object &&
     originMethod === newMethod &&
     prototype[key] &&
@@ -310,13 +312,18 @@ const getOriginMethod = <T extends MObject<T>>(
   object: T,
   key: string,
   originIndex: OriginIndex
-) => {
+): [Function | undefined, boolean | undefined] => {
   if (originIndex in object) {
-    const [, originMethod] =
+    const [, originMethod, originDefinedInPrototype] =
       object[originIndex]!.find(([_key]) => _key === key) || [];
-    return originMethod;
+    return [originMethod, originDefinedInPrototype];
   }
-  return undefined;
+  return [undefined, undefined];
+};
+
+const getPrototypeOf = <T>(object: T): T => {
+  const prototype = Object.getPrototypeOf(object);
+  return prototype.constructor === Object ? object : prototype;
 };
 
 const isAsyncMethod = (method: Function) =>
@@ -344,6 +351,7 @@ const recreateMiddlewareMethods = <T extends MObject<T>>({
 const saveOriginMethod = <T extends MObject<T>>({
   key,
   object,
+  originDefinedInPrototype,
   originIndex,
   originMethod
 }: ObjectMiddlewareSaveOrigin<T, OriginIndex>) => {
@@ -351,7 +359,7 @@ const saveOriginMethod = <T extends MObject<T>>({
     originIndex in object &&
     !object[originIndex]!.find(([_key]) => _key === key)
   ) {
-    object[originIndex]!.push([key, originMethod]);
+    object[originIndex]!.push([key, originMethod, originDefinedInPrototype]);
   }
 };
 
@@ -379,7 +387,7 @@ export const subscribe = <T extends MObject<T>>(
 ) => {
   if (typeof object !== "object" || typeof middleware !== "function") return;
 
-  const prototype = Object.getPrototypeOf(object);
+  const prototype = getPrototypeOf(object);
   const [
     subscriptionObject,
     initIndex,
@@ -416,6 +424,7 @@ export const subscribe = <T extends MObject<T>>(
     saveOriginMethod({
       key,
       object: subscriptionObject,
+      originDefinedInPrototype: !Object.keys(object).includes(key),
       originIndex,
       originMethod: currentMethod
     });
@@ -455,7 +464,7 @@ export const unsubscribe = <T extends MObject<T>>(
 ) => {
   if (typeof object !== "object" || typeof middleware !== "function") return;
 
-  const prototype = Object.getPrototypeOf(object);
+  const prototype = getPrototypeOf(object);
   const [
     unsubscriptionObject,
     initIndex,
@@ -476,7 +485,7 @@ export const unsubscribe = <T extends MObject<T>>(
       continue;
     }
 
-    const originMethod = getOriginMethod(
+    const [originMethod, originDefinedInPrototype] = getOriginMethod(
       unsubscriptionObject,
       key,
       originIndex
@@ -510,6 +519,7 @@ export const unsubscribe = <T extends MObject<T>>(
         key,
         newMethod,
         object: unsubscriptionObject,
+        originDefinedInPrototype,
         originMethod,
         prototype
       });
@@ -531,7 +541,7 @@ export const unsubscribeAll = <T extends MObject<T>>(
 ) => {
   if (typeof object !== "object") return;
 
-  const prototype = Object.getPrototypeOf(object);
+  const prototype = getPrototypeOf(object);
   const [
     unsubscriptionObject,
     initIndex,
@@ -552,7 +562,7 @@ export const unsubscribeAll = <T extends MObject<T>>(
       continue;
     }
 
-    const originMethod = getOriginMethod(
+    const [originMethod, originDefinedInPrototype] = getOriginMethod(
       unsubscriptionObject,
       key,
       originIndex
@@ -573,6 +583,7 @@ export const unsubscribeAll = <T extends MObject<T>>(
         key,
         newMethod: originMethod,
         object: unsubscriptionObject,
+        originDefinedInPrototype,
         originMethod,
         prototype
       });

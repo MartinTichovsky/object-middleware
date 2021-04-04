@@ -12,6 +12,7 @@
     "stripInternal": true,
     "strictNullChecks": true,
     "target": "es2019",
+    "types": ["jest"],
     "rootDir": "src"
   },
   "include": ["src"],

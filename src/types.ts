@@ -10,6 +10,7 @@ export type ObjectMiddlewareAssignParams<T> = {
   key: string;
   newMethod: Function;
   object: T;
+  originDefinedInPrototype?: boolean;
   originMethod: Function;
   prototype: T;
 };
@@ -50,7 +51,7 @@ export type ObjectMiddlewareInitType<T> = [
   type: ObjectMiddlewareType
 ];
 
-export type ObjectMiddlewareOriginType = [key: string, originMethod: Function];
+export type ObjectMiddlewareOriginType = [key: string, originMethod: Function, originDefinedInPrototype: boolean];
 
 export type ObjectMiddlewareDeleteOriginProps<T, Index> = {
   key: string;
@@ -83,6 +84,7 @@ export type ObjectMiddlewareRecreateProps<T> = {
 export type ObjectMiddlewareSaveOrigin<T, Index> = {
   key: string;
   object: T;
+  originDefinedInPrototype: boolean;
   originIndex: Index;
   originMethod: Function;
 };

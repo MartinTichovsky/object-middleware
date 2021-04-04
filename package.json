@@ -1,6 +1,6 @@
 {
   "name": "object-middleware",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Subscribe middlewares to methods of a class",
   "author": "Martin Tichovsky",
   "license": "MIT",

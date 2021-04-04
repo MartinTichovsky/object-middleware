@@ -646,6 +646,47 @@ describe("Prototype", () => {
     expect(testObject2.testMethod()).toBe(0);
   });
 
+  test("Overwriting prototype method", () => {
+    class TestClass {
+      constructor() {}
+      testMethod() {
+        return 0;
+      }
+    }
+
+    const testObject1 = new TestClass();
+    const testObject2 = new TestClass();
+
+    const middleware1 = () => 15;
+    const middleware2 = () => 20;
+
+    testObject2.testMethod = function () {
+      return 55;
+    };
+
+    subscribe(
+      testObject1,
+      middleware1,
+      ObjectMiddlewareType.OVERRIDE,
+      [],
+      true
+    );
+
+    subscribe(testObject2, middleware2, ObjectMiddlewareType.OVERRIDE);
+
+    expect(testObject1.testMethod()).toBe(15);
+    expect(testObject2.testMethod()).toBe(20);
+
+    unsubscribe(testObject2, middleware2, ObjectMiddlewareType.OVERRIDE);
+
+    expect(testObject2.testMethod()).toBe(55);
+
+    unsubscribeAll(testObject2, [], true);
+
+    expect(testObject1.testMethod()).toBe(0);
+    expect(testObject2.testMethod()).toBe(55);
+  });
+
   test("Alter Subscribe", () => {
     class TestClass {
       constructor() {}
@@ -685,4 +726,32 @@ describe("Prototype", () => {
     expect(testObject1.testMethod(3)).toBe(6);
     expect(testObject2.testMethod(3)).toBe(9);
   });
+});
+
+test("Simple object", () => {
+  const testObject = {
+    testMethod: function () {
+      return 0;
+    }
+  };
+
+  const middleware = () => {
+    return 10;
+  };
+
+  subscribe(testObject, middleware, ObjectMiddlewareType.OVERRIDE);
+
+  expect(testObject.testMethod()).toBe(10);
+
+  unsubscribeAll(testObject);
+
+  expect(testObject.testMethod()).toBe(0);
+
+  subscribe(testObject, middleware, ObjectMiddlewareType.OVERRIDE, [], true);
+
+  expect(testObject.testMethod()).toBe(10);
+
+  unsubscribeAll(testObject, [], true);
+
+  expect(testObject.testMethod()).toBe(0);
 });
