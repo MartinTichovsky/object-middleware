@@ -52,7 +52,7 @@ const build = (tsconfigPath) => {
   const tsconfig = loadAndMergeConfig(tsconfigPath);
   if (checkRequiredProperties(tsconfigPath, tsconfig)) {
     spawnSync(
-      "babel",
+      `babel${winCmd}`,
       [
         ...tsconfig.include,
         "--out-dir",
@@ -67,7 +67,7 @@ const build = (tsconfigPath) => {
       { stdio: "inherit" }
     );
     spawnSync(
-      "tsc",
+      `tsc${winCmd}`,
       ["--declaration", "--emitDeclarationOnly", "--project", tsconfigPath],
       {
         stdio: "inherit"
@@ -75,5 +75,7 @@ const build = (tsconfigPath) => {
     );
   }
 };
+
+const winCmd = process.platform === "win32" ? ".cmd" : "";
 
 args.forEach((tsconfigPath) => build(tsconfigPath));

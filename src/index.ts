@@ -12,6 +12,8 @@ import {
   ObjectMiddlewareType
 } from "./types";
 
+export { ObjectMiddlewareType };
+
 const instanceInitIndex = Symbol("__init__");
 const instanceOriginIndex = Symbol("__origin__");
 const prototypeInitIndex = Symbol("__protototype_init__");

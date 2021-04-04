@@ -1,4 +1,9 @@
 import {
+  ObjectMiddlewareOverrideFunction,
+  ObjectMiddlewareParams
+} from "./types";
+import {
+  ObjectMiddlewareType,
   instanceInitIndex,
   instanceOriginIndex,
   prototypeInitIndex,
@@ -6,11 +11,6 @@ import {
   unsubscribe,
   unsubscribeAll
 } from ".";
-import {
-  ObjectMiddlewareOverrideFunction,
-  ObjectMiddlewareParams,
-  ObjectMiddlewareType
-} from "./types";
 
 const symbol1 = Symbol("__unique_1__");
 const symbol2 = Symbol("__unique_2__");
