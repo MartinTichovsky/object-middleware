@@ -13,12 +13,6 @@ import {
 } from "./types";
 
 export { ObjectMiddlewareType };
-
-const instanceInitIndex = Symbol("__init__");
-const instanceOriginIndex = Symbol("__origin__");
-const prototypeInitIndex = Symbol("__protototype_init__");
-const prototypeOriginIndex = Symbol("__protototype_origin__");
-
 /* @internal */
 export {
   instanceInitIndex,
@@ -26,6 +20,11 @@ export {
   instanceOriginIndex,
   prototypeOriginIndex
 };
+
+const instanceInitIndex = Symbol("__init__");
+const instanceOriginIndex = Symbol("__origin__");
+const prototypeInitIndex = Symbol("__protototype_init__");
+const prototypeOriginIndex = Symbol("__protototype_origin__");
 
 interface MObject<T> extends Object {
   [instanceInitIndex]?: ObjectMiddlewareInitType<T>[];
@@ -99,7 +98,10 @@ const createMiddlewareMethod = <T>({
   middleware,
   type
 }: ObjectMiddlewareMethodProps<T>) => {
-  if (type === ObjectMiddlewareType.AFTER && isAsyncMethod(currentMethod)) {
+  if (
+    type === ObjectMiddlewareType.AFTER &&
+    (isAsyncMethod(currentMethod) || isAsyncMethod(middleware))
+  ) {
     const method = async function (...args: unknown[]) {
       const result = await currentMethod.call(this, ...args);
       await middleware(
@@ -141,7 +143,10 @@ const createMiddlewareMethod = <T>({
     return method;
   }
 
-  if (type === ObjectMiddlewareType.BEFORE && isAsyncMethod(currentMethod)) {
+  if (
+    type === ObjectMiddlewareType.BEFORE &&
+    (isAsyncMethod(currentMethod) || isAsyncMethod(middleware))
+  ) {
     const method = async function (...args: unknown[]) {
       await middleware(
         {
@@ -181,7 +186,7 @@ const createMiddlewareMethod = <T>({
 
   if (
     type === ObjectMiddlewareType.CONDITION_AFTER &&
-    isAsyncMethod(currentMethod)
+    (isAsyncMethod(currentMethod) || isAsyncMethod(middleware))
   ) {
     const method = async function (...args: unknown[]) {
       const result = currentMethod.call(this, ...args);
@@ -214,7 +219,7 @@ const createMiddlewareMethod = <T>({
 
   if (
     type === ObjectMiddlewareType.CONDITION_BEFORE &&
-    isAsyncMethod(currentMethod)
+    (isAsyncMethod(currentMethod) || isAsyncMethod(middleware))
   ) {
     const method = async function (...args: unknown[]) {
       if (await middleware({ methodName: key, ref: this }, ...args)) {

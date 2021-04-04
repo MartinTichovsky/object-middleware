@@ -1,16 +1,16 @@
 import {
-  ObjectMiddlewareOverrideFunction,
-  ObjectMiddlewareParams
-} from "./types";
-import {
-  ObjectMiddlewareType,
   instanceInitIndex,
   instanceOriginIndex,
+  ObjectMiddlewareType,
   prototypeInitIndex,
   subscribe,
   unsubscribe,
   unsubscribeAll
 } from ".";
+import {
+  ObjectMiddlewareOverrideFunction,
+  ObjectMiddlewareParams
+} from "./types";
 
 const symbol1 = Symbol("__unique_1__");
 const symbol2 = Symbol("__unique_2__");
@@ -374,10 +374,37 @@ describe("Correct Order of Performing Functions", () => {
     expect(order).toEqual([1]);
   });
 
-  test("[ASYNC] CONDITION_AFTER - Must be Triggered After Origin Method", async () => {
+  test("[ASYNC] CONDITION_BEFORE - Must be Triggered After Origin Method", async () => {
     let order: number[] = [];
     const myObject = new (class TestClass {
       async method() {
+        order.push(2);
+      }
+    })();
+    const middleware1 = async () => {
+      order.push(1);
+      return true;
+    };
+    const middleware2 = async () => {
+      order.push(1);
+      return false;
+    };
+
+    subscribe(myObject, middleware1, ObjectMiddlewareType.CONDITION_BEFORE);
+    await myObject.method();
+    expect(order).toEqual([1, 2]);
+
+    order = [];
+
+    subscribe(myObject, middleware2, ObjectMiddlewareType.CONDITION_BEFORE);
+    await myObject.method();
+    expect(order).toEqual([1]);
+  });
+
+  test("[ASYNC] CONDITION_BEFORE - Must be Triggered After Origin Method - Assign async method to non async method", async () => {
+    let order: number[] = [];
+    const myObject = new (class TestClass {
+      method() {
         order.push(2);
       }
     })();
