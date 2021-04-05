@@ -4,13 +4,11 @@ import {
   ObjectMiddlewareType,
   prototypeInitIndex,
   subscribe,
+  subscribeTypeSafe,
   unsubscribe,
   unsubscribeAll
 } from ".";
-import {
-  ObjectMiddlewareOverrideFunction,
-  ObjectMiddlewareParams
-} from "./types";
+import { ObjectMiddlewareFunction, ObjectMiddlewareParams } from "./types";
 
 const symbol1 = Symbol("__unique_1__");
 const symbol2 = Symbol("__unique_2__");
@@ -486,7 +484,7 @@ describe("Returns", () => {
     const middleware1 = () => {
       return 123;
     };
-    const middleware2: ObjectMiddlewareOverrideFunction<MyClass> = function (
+    const middleware2: ObjectMiddlewareFunction<MyClass> = function (
       _,
       param1: string,
       param2: number,
@@ -518,7 +516,7 @@ describe("Returns", () => {
 
 test("Contains Reference, Resource and Name", () => {
   const myObject = new MyClass();
-  const middleware: ObjectMiddlewareOverrideFunction<MyClass> = function (
+  const middleware: ObjectMiddlewareFunction<MyClass> = function (
     ref: ObjectMiddlewareParams<MyClass>
   ) {
     expect(ref.ref).toEqual(myObject);
@@ -538,7 +536,7 @@ describe("Parameters Must be Passed", () => {
     false,
     Symbol("__unique__")
   ];
-  const middleware: ObjectMiddlewareOverrideFunction<MyClass> = function (
+  const middleware: ObjectMiddlewareFunction<MyClass> = function (
     _,
     param1: string,
     param2: number,
@@ -589,7 +587,7 @@ describe("Prototype", () => {
     const testObject2 = new TestClass(32);
     const testObject3 = new TestClass(128);
 
-    const middleware: ObjectMiddlewareOverrideFunction<TestClass> = (
+    const middleware: ObjectMiddlewareFunction<TestClass> = (
       ref: ObjectMiddlewareParams<TestClass>,
       num: number
     ) => {
@@ -724,13 +722,13 @@ describe("Prototype", () => {
     const testObject1 = new TestClass();
     const testObject2 = new TestClass();
 
-    const middleware1: ObjectMiddlewareOverrideFunction<TestClass> = (
+    const middleware1: ObjectMiddlewareFunction<TestClass> = (
       _: ObjectMiddlewareParams<TestClass>,
       num: number
     ) => {
       return num * 2;
     };
-    const middleware2: ObjectMiddlewareOverrideFunction<TestClass> = (
+    const middleware2: ObjectMiddlewareFunction<TestClass> = (
       _: ObjectMiddlewareParams<TestClass>,
       num: number
     ) => {
@@ -781,4 +779,58 @@ test("Simple object", () => {
   unsubscribeAll(testObject, [], true);
 
   expect(testObject.testMethod()).toBe(0);
+});
+
+describe("TypeScript safe using", () => {
+  test("Class", () => {
+    class TestClass {
+      myMethod(num: number): number {
+        return num;
+      }
+    }
+
+    const myObject = new TestClass();
+
+    const middleware: ObjectMiddlewareFunction<
+      typeof myObject,
+      typeof myObject["myMethod"]
+    > = (ref, num: number) => {
+      return ref.result && num > 10 ? ref.result : 0;
+    };
+
+    subscribeTypeSafe(
+      myObject,
+      middleware,
+      "myMethod",
+      ObjectMiddlewareType.OVERRIDE
+    );
+
+    expect(myObject.myMethod(9)).toBe(0);
+    expect(myObject.myMethod(11)).toBe(11);
+  });
+
+  test("Simple Object", () => {
+    const myObject = {
+      myMethod: (num: number): number => {
+        return num;
+      }
+    };
+
+    const middleware: ObjectMiddlewareFunction<
+      typeof myObject,
+      typeof myObject["myMethod"]
+    > = (ref, num: number) => {
+      return ref.result && num > 10 ? ref.result : 0;
+    };
+
+    subscribeTypeSafe(
+      myObject,
+      middleware,
+      "myMethod",
+      ObjectMiddlewareType.OVERRIDE
+    );
+
+    expect(myObject.myMethod(9)).toBe(0);
+    expect(myObject.myMethod(11)).toBe(11);
+  });
 });

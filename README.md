@@ -23,7 +23,7 @@ This simple function should help with subscribing middlewares to methods of an o
  * @param middleware Middleware function
  * @param type Type of the middleware
  * @param methodName Name of a method or list of method names, if is not specified or an empty array, all methods will be touched
- * @param subscribeInPrototype if is set to true, middleware will be subscribed in prototype = all instances of the parent class will be affected
+ * @param subscribeInPrototype If is set to true, middleware will be subscribed in prototype = all instances of the parent class will be affected
  */
 subscribe(
   object,
@@ -36,13 +36,32 @@ subscribe(
 
 ```ts
 /**
+ * Type-safe subscribe function (for TypeScript only). This method doesn't work with private methods.
+ *
+ * @param object Subject object
+ * @param middleware Middleware function
+ * @param methodName Name of a method
+ * @param type Type of the middleware
+ * @param subscribeInPrototype If is set to true, middleware will be subscribed in prototype = all instances of the parent class will be affected
+ */
+subscribeTypeSafe(
+  object,
+  middleware,
+  methodName,
+  type,
+  subscribeInPrototype = false
+)
+```
+
+```ts
+/**
  * Unsubscribe middleware
  *
  * @param object Subject object
  * @param middleware Middleware function
  * @param type Type of the middleware
  * @param methodName Name of a method or list of method names, if is not specified or an empty array, all methods will be touched
- * @param unsubscribeInPrototype if is set to true, middleware will be unsubscribed in prototype = all instances of the parent class will be affected
+ * @param unsubscribeInPrototype If is set to true, middleware will be unsubscribed in prototype = all instances of the parent class will be affected
  */
 unsubscribe(
   object,
@@ -59,7 +78,7 @@ unsubscribe(
  *
  * @param object Subject object
  * @param methodName Name of a method or list of method names, if is not specified or an empty array, all methods will be touched
- * @param unsubscribeInPrototype if is set to true, middleware will be unsubscribed in prototype = all instances of the parent class will be affected
+ * @param unsubscribeInPrototype If is set to true, middleware will be unsubscribed in prototype = all instances of the parent class will be affected
  */
 const unsubscribeAll = (
   object,
@@ -92,7 +111,7 @@ Middleware function will receive at least one parameter. First parameter is an o
 type ObjectMiddlewareParams<T, R = any> = {
   methodName: string; // name of the origin method
   ref: T; // reference to the origin object
-  result?: R; // result of the origin method; undefined in types AFTER and BEFORE
+  result?: R; // result of the origin method; undefined in types BEFORE and CONDITION_BEFORE
 }
 ```
 
@@ -133,7 +152,7 @@ class MyClass {
 const myObject = new MyClass();
 ```
 
-`AFTER` - the middleware is performed after an object method
+`AFTER` - The middleware is performed after an object method.
 
 ```ts
 const middleware = () => {
@@ -152,7 +171,7 @@ myObject.myMethod(); // CALL the METHOD
 //    middleware
 ```
 
-`BEFORE` - the middleware is performed before an object method
+`BEFORE` - The middleware is performed before an object method.
 
 ```ts
 const middleware = () => {
@@ -171,7 +190,7 @@ myObject.myMethod(); // CALL the METHOD
 //    myMethod
 ```
 
-`CONDITION_AFTER` - an object method is performed, then the middleware is performed; the meddleware's return is `true`, than the return is the object method return.
+`CONDITION_AFTER` - An object method is performed, then the middleware is performed; the meddleware's return is `true`, than the return is the object method return.
 
 ```ts
 const middleware = () => {
@@ -192,7 +211,7 @@ console.log(myObject.myReturn()); // CALL the METHOD
 //    123
 ```
 
-`CONDITION_AFTER` - an object method is performed, then the middleware is performed; the meddleware's return is `false`, than the return is undefined.
+`CONDITION_AFTER` - An object method is performed, then the middleware is performed; the meddleware's return is `false`, than the return is undefined.
 
 ```ts
 const middleware = () => {
@@ -213,7 +232,7 @@ console.log(myObject.myReturn()); // CALL the METHOD
 //    undefined
 ```
 
-`CONDITION_BEFORE` - an object method is performed because the middleware's return is `true`
+`CONDITION_BEFORE` - An object method is performed because the middleware's return is `true`.
 
 ```ts
 const middleware = () => {
@@ -234,7 +253,7 @@ console.log(myObject.myReturn()); // CALL the METHOD
 //    123
 ```
 
-`CONDITION_BEFORE` - an object method is not performed because the middleware's return is `false`
+`CONDITION_BEFORE` - An object method is not performed because the middleware's return is `false`.
 
 ```ts
 const middleware = () => {
@@ -254,7 +273,7 @@ console.log(myObject.myReturn()); // CALL the METHOD
 //    undefined
 ```
 
-`OVERRIDE` - middleware will overwrite the return of an object method
+`OVERRIDE` - Middleware will overwrite the return of an object method.
 
 ```ts
 const middleware = () => {
@@ -275,7 +294,7 @@ console.log(myObject.myReturn()); // CALL the METHOD
 //    987
 ```
 
-`OVERRIDE` - middleware will return the return of an object method
+`OVERRIDE` - Middleware will return the return of an object method.
 
 ```ts
 const middleware = (ref) => {
@@ -329,7 +348,74 @@ myObject.passProps(55, "abcd"); // CALL the METHOD
 
 ## More Examples
 
-Subscribe the middleware only to "passProps" method
+Working with simple object and TypeScript type-safe using. Trying to subsribe in a private method or anything else except for a method type will cause a TypeScript error.
+
+```ts
+const myObject = {
+  myMethod: (num: number): number => {
+    return num;
+  }
+};
+
+const middleware: ObjectMiddlewareFunction<
+  typeof myObject,
+  typeof myObject["myMethod"]
+> = (ref, num: number) => {
+  return ref.result && num > 10 ? ref.result : 0;
+};
+
+subscribeTypeSafe(
+  myObject,
+  middleware,
+  "myMethod",
+  ObjectMiddlewareType.OVERRIDE
+);
+
+console.log(myObject.myMethod(9));
+console.log(myObject.myMethod(11));
+
+// console:
+//    0
+//    11
+```
+
+This code will cause an error.
+
+```ts
+class MyClass {
+  private myMethod() {
+
+  }
+}
+
+const myClass = new MyClass();
+
+const myObject = {
+  myMethod: 5
+};
+
+
+const middleware = () => {};
+
+// this code will cause an error because myMetod doesn't exist in myClass (because it is private we can't access to it)
+subscribeTypeSafe(
+  myClass,
+  middleware,
+  "myMethod",
+  ObjectMiddlewareType.BEFORE
+);
+
+// this code will cause an error because myObject.myMethod is not a function
+subscribeTypeSafe(
+  myObject,
+  middleware,
+  "myMethod",
+  ObjectMiddlewareType.BEFORE
+);
+
+```
+
+Subscribe the middleware only to "passProps" method.
 
 ```ts
 subscribe(
@@ -340,7 +426,7 @@ subscribe(
 );
 ```
 
-ASYNC functions and Promises work as well
+ASYNC functions and Promises work as well.
 
 ```ts
 class MyClass {
@@ -375,7 +461,7 @@ console.log(await myObject.passProps(11))
 //    11
 ```
 
-Overriding a private method works as well
+Overriding a private method works as well.
 
 ```ts
 class MyClass {

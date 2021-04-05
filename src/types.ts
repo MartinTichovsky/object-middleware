@@ -1,3 +1,7 @@
+export type AnyType = any;
+
+export type Function = (...args: AnyType[]) => AnyType;
+
 export enum ObjectMiddlewareType {
   AFTER,
   BEFORE,
@@ -22,36 +26,66 @@ export type ObjectMiddlewareContinueParams<T, Index> = {
   methodName: string | string[];
 };
 
-export type ObjectMiddlewareParams<T, R = any> = {
+export type ObjectMiddlewareParams<T, R = AnyType> = {
   methodName: string;
   ref: T;
   result?: R;
 };
 
-export type ObjectMiddlewareFunctionVoid<T> = (
-  ref: ObjectMiddlewareParams<T>,
-  ...args: any[]
-) => void;
-export type ObjectMiddlewareFunctionBoolean<T> = (
-  ref: ObjectMiddlewareParams<T>,
-  ...args: any[]
-) => boolean;
-export type ObjectMiddlewareOverrideFunction<T> = (
-  ref: ObjectMiddlewareParams<T>,
-  ...args: any[]
-) => unknown;
-export type ObjectMiddlewareFunctionType<T> =
-  | ObjectMiddlewareFunctionVoid<T>
-  | ObjectMiddlewareFunctionBoolean<T>
-  | ObjectMiddlewareOverrideFunction<T>;
-
-export type ObjectMiddlewareInitType<T> = [
+export type ObjectMiddlewareInitType<T, Method extends Function = Function> = [
   key: string,
-  middleware: ObjectMiddlewareFunctionType<T>,
+  middleware: ObjectMiddlewareFunctionType<T, Method>,
   type: ObjectMiddlewareType
 ];
 
-export type ObjectMiddlewareOriginType = [key: string, originMethod: Function, originDefinedInPrototype: boolean];
+export type ObjectMiddlewareFunction<T, Method extends Function = Function> = (
+  ref: ObjectMiddlewareParams<T, ReturnType<Method>>,
+  ...args: Parameters<Method>
+) => ReturnType<Method>;
+export type ObjectMiddlewareFunctionBoolean<
+  T,
+  Method extends Function = Function
+> = (
+  ref: ObjectMiddlewareParams<T, ReturnType<Method>>,
+  ...args: Parameters<Method>
+) => boolean;
+export type ObjectMiddlewareFunctionVoid<
+  T,
+  Method extends Function = Function
+> = (
+  ref: ObjectMiddlewareParams<T, ReturnType<Method>>,
+  ...args: Parameters<Method>
+) => void;
+export type ObjectMiddlewareFunctionType<
+  T,
+  Method extends Function = Function
+> =
+  | ObjectMiddlewareFunctionVoid<T, Method>
+  | ObjectMiddlewareFunctionBoolean<T, Method>
+  | ObjectMiddlewareFunction<T, Method>;
+
+export type ObjectMiddlewareFunctionTypes<
+  T,
+  Method extends Function = Function
+> = {
+  [ObjectMiddlewareType.AFTER]: ObjectMiddlewareFunctionVoid<T, Method>;
+  [ObjectMiddlewareType.CONDITION_AFTER]: ObjectMiddlewareFunctionBoolean<
+    T,
+    Method
+  >;
+  [ObjectMiddlewareType.BEFORE]: ObjectMiddlewareFunctionVoid<T, Method>;
+  [ObjectMiddlewareType.CONDITION_BEFORE]: ObjectMiddlewareFunctionBoolean<
+    T,
+    Method
+  >;
+  [ObjectMiddlewareType.OVERRIDE]: ObjectMiddlewareFunction<T, Method>;
+};
+
+export type ObjectMiddlewareOriginType = [
+  key: string,
+  originMethod: Function,
+  originDefinedInPrototype: boolean
+];
 
 export type ObjectMiddlewareDeleteOriginProps<T, Index> = {
   key: string;

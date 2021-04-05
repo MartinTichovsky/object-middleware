@@ -1,9 +1,11 @@
 import {
+  AnyType,
+  Function,
   ObjectMiddlewareAssignParams,
   ObjectMiddlewareContinueParams,
   ObjectMiddlewareDeleteOriginProps,
   ObjectMiddlewareDeleteProps,
-  ObjectMiddlewareFunctionType,
+  ObjectMiddlewareFunctionTypes,
   ObjectMiddlewareInitType,
   ObjectMiddlewareMethodProps,
   ObjectMiddlewareOriginType,
@@ -26,12 +28,15 @@ const instanceOriginIndex = Symbol("__origin__");
 const prototypeInitIndex = Symbol("__protototype_init__");
 const prototypeOriginIndex = Symbol("__protototype_origin__");
 
-interface MObject<T> extends Object {
-  [instanceInitIndex]?: ObjectMiddlewareInitType<T>[];
-  [instanceOriginIndex]?: ObjectMiddlewareOriginType[];
-  [prototypeInitIndex]?: ObjectMiddlewareInitType<T>[];
-  [prototypeOriginIndex]?: ObjectMiddlewareOriginType[];
-}
+type MObject<T> = Object &
+  {
+    [key in keyof T as Exclude<key, "constructor">]: AnyType;
+  } & {
+    [instanceInitIndex]?: ObjectMiddlewareInitType<T>[];
+    [instanceOriginIndex]?: ObjectMiddlewareOriginType[];
+    [prototypeInitIndex]?: ObjectMiddlewareInitType<T>[];
+    [prototypeOriginIndex]?: ObjectMiddlewareOriginType[];
+  };
 
 type InitIndex = typeof instanceInitIndex | typeof prototypeInitIndex;
 type OriginIndex = typeof instanceOriginIndex | typeof prototypeOriginIndex;
@@ -102,7 +107,7 @@ const createMiddlewareMethod = <T>({
     type === ObjectMiddlewareType.AFTER &&
     (isAsyncMethod(currentMethod) || isAsyncMethod(middleware))
   ) {
-    const method = async function (...args: unknown[]) {
+    const method = async function (...args: Parameters<typeof currentMethod>) {
       const result = await currentMethod.call(this, ...args);
       await middleware(
         {
@@ -123,7 +128,7 @@ const createMiddlewareMethod = <T>({
   }
 
   if (type === ObjectMiddlewareType.AFTER) {
-    const method = function (...args: unknown[]) {
+    const method = function (...args: Parameters<typeof currentMethod>) {
       const result = currentMethod.call(this, ...args);
       middleware(
         {
@@ -147,7 +152,7 @@ const createMiddlewareMethod = <T>({
     type === ObjectMiddlewareType.BEFORE &&
     (isAsyncMethod(currentMethod) || isAsyncMethod(middleware))
   ) {
-    const method = async function (...args: unknown[]) {
+    const method = async function (...args: Parameters<typeof currentMethod>) {
       await middleware(
         {
           methodName: key,
@@ -166,7 +171,7 @@ const createMiddlewareMethod = <T>({
   }
 
   if (type === ObjectMiddlewareType.BEFORE) {
-    const method = function (...args: unknown[]) {
+    const method = function (...args: Parameters<typeof currentMethod>) {
       middleware(
         {
           methodName: key,
@@ -188,7 +193,7 @@ const createMiddlewareMethod = <T>({
     type === ObjectMiddlewareType.CONDITION_AFTER &&
     (isAsyncMethod(currentMethod) || isAsyncMethod(middleware))
   ) {
-    const method = async function (...args: unknown[]) {
+    const method = async function (...args: Parameters<typeof currentMethod>) {
       const result = currentMethod.call(this, ...args);
       if (await middleware({ methodName: key, ref: this, result }, ...args)) {
         return result;
@@ -203,7 +208,7 @@ const createMiddlewareMethod = <T>({
   }
 
   if (type === ObjectMiddlewareType.CONDITION_AFTER) {
-    const method = function (...args: unknown[]) {
+    const method = function (...args: Parameters<typeof currentMethod>) {
       const result = currentMethod.call(this, ...args);
       if (middleware({ methodName: key, ref: this, result }, ...args)) {
         return result;
@@ -221,7 +226,7 @@ const createMiddlewareMethod = <T>({
     type === ObjectMiddlewareType.CONDITION_BEFORE &&
     (isAsyncMethod(currentMethod) || isAsyncMethod(middleware))
   ) {
-    const method = async function (...args: unknown[]) {
+    const method = async function (...args: Parameters<typeof currentMethod>) {
       if (await middleware({ methodName: key, ref: this }, ...args)) {
         return currentMethod.call(this, ...args);
       }
@@ -235,7 +240,7 @@ const createMiddlewareMethod = <T>({
   }
 
   if (type === ObjectMiddlewareType.CONDITION_BEFORE) {
-    const method = function (...args: unknown[]) {
+    const method = function (...args: Parameters<typeof currentMethod>) {
       if (middleware({ methodName: key, ref: this }, ...args)) {
         return currentMethod.call(this, ...args);
       }
@@ -249,7 +254,7 @@ const createMiddlewareMethod = <T>({
   }
 
   if (type === ObjectMiddlewareType.OVERRIDE) {
-    const method = function (...args: unknown[]) {
+    const method = function (...args: Parameters<typeof currentMethod>) {
       return middleware(
         {
           methodName: key,
@@ -383,16 +388,22 @@ const saveOriginMethod = <T extends MObject<T>>({
  * @param middleware Middleware function
  * @param type Type of the middleware
  * @param methodName Name of a method or list of method names, if is not specified or an empty array, all methods will be touched
- * @param subscribeInPrototype if is set to true, middleware will be subscribed in prototype = all instances of the parent class will be affected
+ * @param subscribeInPrototype If is set to true, middleware will be subscribed in prototype = all instances of the parent class will be affected
  */
 export const subscribe = <T extends MObject<T>>(
   object: T,
-  middleware: ObjectMiddlewareFunctionType<T>,
+  middleware: ObjectMiddlewareFunctionTypes<T>[typeof type],
   type: ObjectMiddlewareType = ObjectMiddlewareType.BEFORE,
   methodName: string | string[] = [],
   subscribeInPrototype: boolean = false
 ) => {
-  if (typeof object !== "object" || typeof middleware !== "function") return;
+  if (
+    Array.isArray(object) ||
+    typeof object !== "object" ||
+    typeof middleware !== "function"
+  ) {
+    throw "First parameter must be an object";
+  }
 
   const prototype = getPrototypeOf(object);
   const [
@@ -454,17 +465,51 @@ export const subscribe = <T extends MObject<T>>(
 };
 
 /**
+ * Type-safe subscribe function (for TypeScript only). This method doesn't work with private methods.
+ *
+ * @param object Subject object
+ * @param middleware Middleware function
+ * @param methodName Name of a method
+ * @param type Type of the middleware
+ * @param subscribeInPrototype If is set to true, middleware will be subscribed in prototype = all instances of the parent class will be affected
+ */
+export const subscribeTypeSafe = <
+  T extends MObject<T>,
+  Method extends keyof T &
+    {
+      [Property in keyof T[Method]]: Function;
+    }
+>(
+  object: T,
+  middleware: ObjectMiddlewareFunctionTypes<
+    T,
+    ReturnType<T[Method]>
+  >[typeof type],
+  methodName: Method,
+  type: ObjectMiddlewareType,
+  subscribeInPrototype: boolean = false
+) => {
+  subscribe(
+    object,
+    middleware,
+    type,
+    methodName.toString(),
+    subscribeInPrototype
+  );
+};
+
+/**
  * Unsubscribe middleware
  *
  * @param object Subject object
  * @param middleware Middleware function
  * @param type Type of the middleware
  * @param methodName Name of a method or list of method names, if is not specified or an empty array, all methods will be touched
- * @param unsubscribeInPrototype if is set to true, middleware will be unsubscribed in prototype = all instances of the parent class will be affected
+ * @param unsubscribeInPrototype If is set to true, middleware will be unsubscribed in prototype = all instances of the parent class will be affected
  */
 export const unsubscribe = <T extends MObject<T>>(
   object: T,
-  middleware: ObjectMiddlewareFunctionType<T>,
+  middleware: ObjectMiddlewareFunctionTypes<T>[typeof type],
   type: ObjectMiddlewareType = ObjectMiddlewareType.BEFORE,
   methodName: string | string[] = [],
   unsubscribeInPrototype: boolean = false
@@ -539,7 +584,7 @@ export const unsubscribe = <T extends MObject<T>>(
  *
  * @param object Subject object
  * @param methodName Name of a method or list of method names, if is not specified or an empty array, all methods will be touched
- * @param unsubscribeInPrototype if is set to true, middleware will be unsubscribed in prototype = all instances of the parent class will be affected
+ * @param unsubscribeInPrototype If is set to true, middleware will be unsubscribed in prototype = all instances of the parent class will be affected
  */
 export const unsubscribeAll = <T extends MObject<T>>(
   object: T,
