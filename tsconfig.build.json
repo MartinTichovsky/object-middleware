@@ -1,7 +1,9 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "lib"
+    "module": "commonjs",
+    "outDir": "lib",
+    "target": "es5"
   },
   "exclude": ["src/*.test.ts"]
 }

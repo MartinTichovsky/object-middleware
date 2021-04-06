@@ -59,10 +59,7 @@ const build = (tsconfigPath) => {
         tsconfig.compilerOptions.outDir,
         "--extensions",
         ".ts,.tsx",
-        ...(tsconfig.exclude ? ["--ignore", tsconfig.exclude.join(",")] : []),
-        ...(tsconfig.compilerOptions.target.toLowerCase() === "es5"
-          ? ["--presets", "@babel/preset-env"]
-          : [])
+        ...(tsconfig.exclude ? ["--ignore", tsconfig.exclude.join(",")] : [])
       ],
       { stdio: "inherit" }
     );

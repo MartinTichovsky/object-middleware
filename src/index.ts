@@ -14,7 +14,7 @@ import {
   ObjectMiddlewareType
 } from "./types";
 
-export { ObjectMiddlewareType };
+export * from "./types";
 /* @internal */
 export {
   instanceInitIndex,
