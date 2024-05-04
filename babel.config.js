@@ -1,14 +1,11 @@
-module.exports = function (api, options) {
-  api.cache(false);
+module.exports = function (api) {
+    api.cache(false);
 
-  const presets = [
-    "@babel/preset-typescript",
-    ["@babel/preset-env", { targets: { esmodules: true } }]
-  ];
-  const plugins = ["./plugin/ts-internal"];
-
-  return {
-    presets,
-    plugins
-  };
+    return {
+        presets: [
+            "@babel/preset-typescript",
+            ["@babel/preset-env", { targets: { esmodules: true } }]
+        ],
+        plugins: ["./plugin/ts-internal"]
+    };
 };

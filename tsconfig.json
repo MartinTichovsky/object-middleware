@@ -2,8 +2,8 @@
   "compilerOptions": {
     "alwaysStrict": true,
     "declaration": true,
-    "lib": ["dom", "es2019"],
-    "module": "esnext",
+    "lib": ["dom", "es2020"],
+    "module": "es2020",
     "moduleResolution": "node",
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
@@ -11,7 +11,7 @@
     "noUnusedParameters": true,
     "stripInternal": true,
     "strictNullChecks": true,
-    "target": "es2019",
+    "target": "es2020",
     "types": ["jest"],
     "rootDir": "src"
   },
