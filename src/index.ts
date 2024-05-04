@@ -49,14 +49,17 @@ const assignNewMethod = <T>({
         prototype !== object &&
         originMethod === newMethod &&
         prototype[key] &&
-        typeof object === "object" &&
-        object !== null &&
+        canBeObjectInceted(object) &&
         key in object
     ) {
         delete object[key];
     } else {
         object[key] = newMethod;
     }
+};
+
+const canBeObjectInceted = (object: unknown): object is Record<string, unknown> => {
+    return (typeof object === "object" && object !== null) || typeof object === "function";
 };
 
 const continueCondition = <T>({
@@ -66,11 +69,12 @@ const continueCondition = <T>({
     methodName
 }: ObjectMiddlewareContinueParams<T, InitIndex>) => {
     methodName = !Array.isArray(methodName) ? (methodName ? [methodName] : []) : methodName;
+
     return (
         typeof object[key] !== "function" ||
         key === "constructor" ||
         (methodName.length > 0 && !methodName.includes(key)) ||
-        !(typeof object === "object" && object !== null && initIndex in object)
+        !(canBeObjectInceted(object) && initIndex in object)
     );
 };
 
@@ -343,7 +347,10 @@ const getOriginMethod = <T extends MObject<T>>(
 };
 
 const getPrototypeOf = <T>(object: T): T => {
-    const prototype = Object.getPrototypeOf(object);
+    const prototype =
+        canBeObjectInceted(object) && "prototype" in object
+            ? object.prototype
+            : Object.getPrototypeOf(object);
 
     return prototype.constructor === Object ? object : prototype;
 };
@@ -402,12 +409,12 @@ export const subscribe = <T extends MObject<T>>(
     middleware: ObjectMiddlewareFunctionTypes<T>[typeof type],
     type: ObjectMiddlewareType = ObjectMiddlewareType.BEFORE,
     methodName: string | string[] = [],
-    subscribeInPrototype: boolean = false
+    subscribeInPrototype = false
 ) => {
     if (
         Array.isArray(object) ||
         object === null ||
-        typeof object !== "object" ||
+        (typeof object !== "object" && typeof object !== "function") ||
         typeof middleware !== "function"
     ) {
         throw "First parameter must be an object";
@@ -422,6 +429,12 @@ export const subscribe = <T extends MObject<T>>(
     createResource(subscriptionObject, originIndex, [] as ObjectMiddlewareOriginType[]);
 
     for (const key of Object.getOwnPropertyNames(prototype)) {
+        const descriptor = Object.getOwnPropertyDescriptor(subscriptionObject, key);
+
+        if (descriptor && !("writable" in descriptor && descriptor.writable)) {
+            continue;
+        }
+
         const currentMethod = subscriptionObject[key];
 
         if (
@@ -479,7 +492,7 @@ export const subscribeTypeSafe = <
     middleware: ObjectMiddlewareFunctionTypes<T, ReturnType<T[Method]>>[typeof type],
     methodName: Method,
     type: ObjectMiddlewareType,
-    subscribeInPrototype: boolean = false
+    subscribeInPrototype = false
 ) => {
     subscribe(object, middleware, type, methodName.toString(), subscribeInPrototype);
 };
@@ -498,7 +511,7 @@ export const unsubscribe = <T extends MObject<T>>(
     middleware: ObjectMiddlewareFunctionTypes<T>[typeof type],
     type: ObjectMiddlewareType = ObjectMiddlewareType.BEFORE,
     methodName: string | string[] = [],
-    unsubscribeInPrototype: boolean = false
+    unsubscribeInPrototype = false
 ) => {
     if (typeof object !== "object" || typeof middleware !== "function") {
         return;
@@ -573,7 +586,7 @@ export const unsubscribe = <T extends MObject<T>>(
 export const unsubscribeAll = <T extends MObject<T>>(
     object: T,
     methodName: string | string[] = [],
-    unsubscribeInPrototype: boolean = false
+    unsubscribeInPrototype = false
 ) => {
     if (typeof object !== "object") {
         return;
